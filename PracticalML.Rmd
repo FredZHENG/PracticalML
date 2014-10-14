@@ -1,0 +1,128 @@
+---
+title: "Weight Lifting Motion Correctness"
+output: html_document
+---
+## Synopsis
+This report summarizes the data mining and model building process aiming to predict how well people do weight listing exercises. Raw data used in this report is from [Groupware@LES](http://groupware.les.inf.puc-rio.br/har). 
+
+It is found that the quality of the exercise can be predicted using the pitch, yaw, and roll of both forearm and belt, and the "magnets of dumbbells" in this dataset. Due to the specific characteristics of this dataset, the**k-nearest neighbor (KNN)** approach was adopted, and the prediction accuracy reaches **96.4%**, and the 95% confidence interval is **[95.9%, 96.9%]**. 
+
+This report is divided into 4 parts, the first part is data preprocessing, the second part is exploratory analysis, the third part is about model building and accuracy check, and finally there is the conclusion.
+
+
+## Preprocessing
+Both training and testing dataset will be loaded. A validation set is separated first, which is used to estimate the accuracy of the Because there are 159 features, we will screen out some of them. The features that contains "NA" cells will be taken out. By doing so, there will be 59 predictive features and 1 class feature, and all of them contain data for every record.  
+```{r load, message=FALSE}
+## load training and testing dataset
+library(caret)
+require(gridExtra)
+
+training <- read.csv("pml-training.csv", stringsAsFactors = FALSE)
+testing <- read.csv("pml-testing.csv", stringsAsFactors = FALSE)
+training$classe <- factor(training$classe)
+
+inTrain <- createDataPartition(y=training$classe, p=0.7, list = FALSE)
+validate <- training[-inTrain,]
+training <- training[inTrain,]
+
+## data cleaning 
+ind <- numeric()
+for (i in 1:ncol(training)){
+    if(sum(is.na(training[,i])>0) | sum(training[,i]=="")>0){
+        ind <- c(ind, i)
+    }
+}
+
+training <- training[,-ind]
+validate <- validate[,-ind]
+```
+
+## Exploratory data analysis
+First of all, let's look at the features left. We can justify from the name that the features contains all data are:  
+
+- Acceleration  
+- Gyros  
+- Magnet  
+- Pitch, yaw, and roll  
+of the arm, forearm, belt, and dumbbell.  
+Some of the features should not be used. For example, the prediction should not be dependent on users as we would like to build a model that predict universal body builders.
+```{r}
+sort(names(training))
+```
+That leaves us fewer choices, the exploratory analysis focuses on the effects that acceleration, gyros, magnet, pitch, yaw, and roll data. A lot of plots are generated to **explore whether any particular class can be distinguashed using any feature or combination of features**. Below are some interesting plots that shows realatively clear seperation of classes.
+```{r plot, fig.height=4,fig.width=7}
+attach(training)
+qplot(roll_forearm, pitch_forearm,col = classe, size=I(1), alpha= I(0.5))
+```  
+
+This first plot is the most interesting one, it pretty much separete the class A. Other classes have more overlap, but one can also see straps in different colors.
+
+```{r plot2, fig.height=4,fig.width=7}
+qplot(roll_forearm, yaw_forearm,col = classe, size=I(1), alpha= I(0.5))
+```  
+
+This plot seems to seperate half of the Class C, and also some of the class A.
+
+```{r plot3, fig.height=4,fig.width=7}
+qplot(pitch_belt, roll_belt,col = classe, size=I(1), alpha= I(0.5))
+```  
+
+These two features separated the class E, and also some of the class A, and class C.
+
+```{r plot4, fig.height=4,fig.width=7}
+qplot(magnet_dumbbell_x, magnet_dumbbell_z,col = classe, size=I(1), alpha= I(0.3))
+```  
+
+This plot can separate the class B.
+
+The above figure actually used the data collected from the sensors on forearm and belt. Other features are also used to explain the class variable, but little is found. It actually makes a lot of sense. The difference between class A,B,C,D is mainly on the movement of forearm, and class E differ from other classes in the belt movement. 
+
+## Model building and accuracy check
+###Model building
+From the exploratory analysis, I plan to use the data collected from dumbbell, forearm and belt. The above plots show that linear lines cannot effectively seperate the classes, a model driven approach may not be very sutable. Therefore, the k-nearest-neighbor (KNN) was used to build the model. At the same time, the cross-validation is performed to check the accuracy.
+
+```{r model,cache=TRUE}
+label <-training$classe
+trainingX <- training[,c("pitch_forearm","roll_forearm","yaw_forearm",
+                         "pitch_belt","roll_belt","yaw_belt", 
+                         "magnet_dumbbell_x", "magnet_dumbbell_y", "magnet_dumbbell_z")]
+
+validateX <- validate[,c("pitch_forearm","roll_forearm","yaw_forearm",
+                         "pitch_belt","roll_belt","yaw_belt", 
+                         "magnet_dumbbell_x", "magnet_dumbbell_y", "magnet_dumbbell_z")]
+
+testX <- testing[,c("pitch_forearm","roll_forearm","yaw_forearm",
+                    "pitch_belt","roll_belt","yaw_belt", 
+                    "magnet_dumbbell_x", "magnet_dumbbell_y", "magnet_dumbbell_z")]
+
+knnFit <- train(trainingX, label, 
+                method = "knn", 
+                preProcess = c("center", "scale"), 
+                tuneLength = 10, 
+                tuneGrid = expand.grid(.k=1:10),
+                trControl = trainControl(method = "repeatedcv", repeats=3))
+```
+
+Below is the detail of the model, cross validation is embeded in the training process.   
+Cross-vaidation here helps to select the number of neighbors used in the model, **here, 1 neighbors provides best prediction (see plot below)**.
+```{r plot5, fig.height=3,fig.width=6}
+knnFit
+plot(knnFit)
+```
+
+###Accuracy check
+After that, the validation set is used to estimate the accuracy of the model. The reason why the seperate dataset is used is that the previous dataset has been used to select the number of neighbors. The accuracy now is estimated to be 96.4%
+```{r}
+pre <- predict(knnFit, validateX)
+confusionMatrix(pre, validate$classe)
+```
+
+Below is the prediction for the testing data.
+```{r}
+predict(knnFit, testX)
+```
+
+## Conclusion
+This report shows the process of identifying the critical features, model building, and accuracy check to predict the quality of weight lifting process. The accuracy is shown to be 96.4%, which is pretty high given that only 9 features drawn from 3 sensors are used. 
+
+.
