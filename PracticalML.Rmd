@@ -1,11 +1,9 @@
 ---
-title: "Weight Lifting Motion Correctness"
+title: "Weight Lifting Quality"
 output: html_document
 ---
 ## Synopsis
-This report summarizes the data mining and model building process aiming to predict how well people do weight listing exercises. Raw data used in this report is from [Groupware@LES](http://groupware.les.inf.puc-rio.br/har). 
-
-It is found that the quality of the exercise can be predicted using the pitch, yaw, and roll of both forearm and belt, and the "magnets of dumbbells" in this dataset. Due to the specific characteristics of this dataset, the**k-nearest neighbor (KNN)** approach was adopted, and the prediction accuracy reaches **96.4%**, and the 95% confidence interval is **[95.9%, 96.9%]**. 
+This report summarizes the data mining and model building process aiming to predict how well people do weight listing exercises. Raw data used in this report is from [Groupware@LES](http://groupware.les.inf.puc-rio.br/har). It is found that the quality of the exercise can be predicted using the pitch, yaw, and roll of both forearm and belt, and the "magnets of dumbbells" in this dataset. Due to the specific characteristics of this dataset, the**k-nearest neighbor (KNN)** approach was adopted and the prediction accuracy reaches **96.4%**, and the 95% confidence interval is **[95.9%, 96.9%]**. 
 
 This report is divided into 4 parts, the first part is data preprocessing, the second part is exploratory analysis, the third part is about model building and accuracy check, and finally there is the conclusion.
 
